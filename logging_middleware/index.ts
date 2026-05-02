@@ -233,6 +233,7 @@ export async function LogFatal(
 // ── Self-test (runs only when executed directly) ─────────────
 
 async function selfTest(): Promise<void> {
+  process.stdout.write("\n=== LOGGING MIDDLEWARE — SELF-TEST ===\n\n");
   try {
     await Log({
       stack: "backend",
@@ -240,6 +241,7 @@ async function selfTest(): Promise<void> {
       package: "middleware",
       message: "Self-test: validating connection",
     });
+    process.stdout.write("[OK] info  → API accepted log entry\n");
 
     await Log({
       stack: "backend",
@@ -247,6 +249,23 @@ async function selfTest(): Promise<void> {
       package: "middleware",
       message: "Self-test debug entry",
     });
+    process.stdout.write("[OK] debug → API accepted log entry\n");
+
+    await Log({
+      stack: "backend",
+      level: "warn",
+      package: "middleware",
+      message: "Self-test warn entry",
+    });
+    process.stdout.write("[OK] warn  → API accepted log entry\n");
+
+    await Log({
+      stack: "backend",
+      level: "error",
+      package: "middleware",
+      message: "Self-test error entry",
+    });
+    process.stdout.write("[OK] error → API accepted log entry\n");
 
     await Log({
       stack: "backend",
@@ -254,6 +273,11 @@ async function selfTest(): Promise<void> {
       package: "middleware",
       message: "Self-test completed successfully",
     });
+    process.stdout.write("[OK] info  → API accepted log entry\n");
+
+    process.stdout.write("\n✓ All 5 log entries sent successfully\n");
+    process.stdout.write("  Endpoint: " + LOGS_ENDPOINT + "\n");
+    process.stdout.write("  Stack: backend | Package: middleware\n\n");
   } catch (err) {
     // We intentionally write to stderr here ONLY during self-test
     // because the logging API itself failed and we need a fallback
