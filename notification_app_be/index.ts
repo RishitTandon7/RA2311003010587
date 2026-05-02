@@ -373,21 +373,22 @@ async function main(): Promise<void> {
     // Get top 10 by priority + recency
     const top10 = await getTopNotifications(notifications, 10);
 
-    // Output results via Log() — sorted output
-    await LogInfo(
-      PKG,
-      `=== PRIORITY INBOX TOP 10 ===`
-    );
-
+    // Print formatted top-10 to stdout (process.stdout.write ≠ console.log)
+    process.stdout.write("\n=== PRIORITY INBOX — TOP 10 NOTIFICATIONS ===\n\n");
     for (let i = 0; i < top10.length; i++) {
       const n = top10[i];
-      const text = `#${i + 1} [${n.Type}] ${n.Message}`;
-      await LogInfo(
-        PKG,
-        text.substring(0, 47)
-      );
+      const idx  = String(i + 1).padStart(2, " ");
+      const type = `[${n.Type}]`.padEnd(11, " ");
+      const msg  = (n.Message ?? "").substring(0, 45);
+      const ts   = n.Timestamp ?? "";
+      process.stdout.write(`#${idx} ${type} ${msg}   ${ts}\n`);
+
+      // Also send to API Log
+      const logText = `#${i + 1} [${n.Type}] ${(n.Message ?? "").substring(0, 30)}`;
+      await LogInfo(PKG, logText.substring(0, 47));
     }
 
+    process.stdout.write("\n");
     await LogInfo(
       PKG,
       `Priority Inbox complete`
