@@ -28,7 +28,7 @@ import {
 dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
 
 // ── Package identifier for all logs from this module ─────────
-const PKG: LogPackage = "vehicle_maintenance_scheduler";
+const PKG: LogPackage = "service";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -81,7 +81,7 @@ function getAuthHeaders(): Record<string, string> {
 async function fetchDepots(): Promise<Depot[]> {
   await LogInfo(
     PKG,
-    "Initiating GET request to /depots endpoint to retrieve depot data"
+    "Initiating GET request to /depots"
   );
 
   try {
@@ -94,16 +94,15 @@ async function fetchDepots(): Promise<Depot[]> {
 
     await LogInfo(
       PKG,
-      `Successfully fetched ${depots.length} depots — IDs: [${depots.map((d) => d.ID).join(", ")}], ` +
-        `MechanicHours: [${depots.map((d) => d.MechanicHours).join(", ")}]`
+      `Successfully fetched ${depots.length} depots`
     );
 
     return depots;
   } catch (err) {
     const msg =
       err instanceof AxiosError
-        ? `Depot API request failed [status=${err.response?.status ?? "N/A"}]: ${err.message}`
-        : `Unexpected error fetching depots: ${String(err)}`;
+        ? `Depot API failed: ${err.response?.status}`
+        : `Error fetching depots`;
 
     await LogError(PKG, msg);
     throw new Error(msg);
@@ -117,7 +116,7 @@ async function fetchDepots(): Promise<Depot[]> {
 async function fetchVehicles(): Promise<VehicleTask[]> {
   await LogInfo(
     PKG,
-    "Initiating GET request to /vehicles endpoint to retrieve vehicle task data"
+    "Initiating GET request to /vehicles"
   );
 
   try {
@@ -130,18 +129,15 @@ async function fetchVehicles(): Promise<VehicleTask[]> {
 
     await LogInfo(
       PKG,
-      `Successfully fetched ${vehicles.length} vehicle tasks — ` +
-        `TaskID range: [${Math.min(...vehicles.map((v) => v.TaskID))}–${Math.max(...vehicles.map((v) => v.TaskID))}], ` +
-        `total Duration: ${vehicles.reduce((s, v) => s + v.Duration, 0)}h, ` +
-        `total Impact: ${vehicles.reduce((s, v) => s + v.Impact, 0)}`
+      `Successfully fetched ${vehicles.length} vehicle tasks`
     );
 
     return vehicles;
   } catch (err) {
     const msg =
       err instanceof AxiosError
-        ? `Vehicles API request failed [status=${err.response?.status ?? "N/A"}]: ${err.message}`
-        : `Unexpected error fetching vehicles: ${String(err)}`;
+        ? `Vehicles API failed: ${err.response?.status}`
+        : `Error fetching vehicles`;
 
     await LogError(PKG, msg);
     throw new Error(msg);
@@ -220,8 +216,7 @@ async function scheduleMaintenanceForDepot(
 
   await LogDebug(
     PKG,
-    `Depot ${depot.ID}: ${depotTasks.length} tasks available, ` +
-      `mechanic-hour budget = ${depot.MechanicHours}h`
+    `Depot ${depot.ID}: ${depotTasks.length} tasks available`
   );
 
   // Run 0/1 Knapsack DP
@@ -232,10 +227,7 @@ async function scheduleMaintenanceForDepot(
 
   await LogInfo(
     PKG,
-    `Depot ${depot.ID} schedule optimised — selected ${selectedTasks.length}/${depotTasks.length} tasks, ` +
-      `totalDuration=${totalDuration}h/${depot.MechanicHours}h budget, ` +
-      `totalImpact=${totalImpact}, ` +
-      `selectedTaskIDs=[${selectedTasks.map((t) => t.TaskID).join(", ")}]`
+    `Depot ${depot.ID} schedule optimised`
   );
 
   return {
@@ -254,7 +246,7 @@ async function main(): Promise<void> {
   try {
     await LogInfo(
       PKG,
-      "Vehicle Maintenance Scheduler starting — fetching depot and vehicle data from evaluation-service"
+      "Scheduler starting — fetching data"
     );
 
     // Fetch data live from APIs (never stored in DB)
@@ -265,7 +257,7 @@ async function main(): Promise<void> {
 
     await LogInfo(
       PKG,
-      `Data retrieval complete — ${depots.length} depots, ${vehicles.length} vehicle tasks loaded`
+      `Data retrieval complete`
     );
 
     // Process each depot independently
@@ -292,33 +284,18 @@ async function main(): Promise<void> {
 
     await LogInfo(
       PKG,
-      `All depots processed — ${grandTotalSelected} tasks scheduled across ${depots.length} depots, ` +
-        `combined duration=${grandTotalDuration}h, combined impact=${grandTotalImpact}`
+      `All depots processed`
     );
 
     // Print results per depot (using Log, never console.log)
     for (const sch of schedules) {
-      await LogInfo(
-        PKG,
-        `\n=== Depot ${sch.depotId} ===\n` +
-          `  Budget: ${sch.mechanicHoursBudget}h\n` +
-          `  Tasks Considered: ${sch.tasksConsidered}\n` +
-          `  Tasks Selected: ${sch.selectedTasks.length}\n` +
-          `  Total Duration: ${sch.totalDuration}h\n` +
-          `  Total Impact: ${sch.totalImpact}\n` +
-          `  Selected Tasks:\n` +
-          sch.selectedTasks
-            .map(
-              (t) =>
-                `    - TaskID=${t.TaskID}, Duration=${t.Duration}h, Impact=${t.Impact}`
-            )
-            .join("\n")
-      );
+      await LogInfo(PKG, `Depot ${sch.depotId} tasks: ${sch.selectedTasks.length}`);
+      await LogInfo(PKG, `Depot ${sch.depotId} totalImpact: ${sch.totalImpact}`);
     }
 
     await LogInfo(
       PKG,
-      "Vehicle Maintenance Scheduler completed successfully — all depot schedules optimised"
+      "Scheduler completed successfully"
     );
   } catch (err) {
     const errorMessage =
@@ -327,7 +304,7 @@ async function main(): Promise<void> {
     try {
       await LogFatal(
         PKG,
-        `Vehicle Maintenance Scheduler terminated with fatal error: ${errorMessage}`
+        `Scheduler terminated with fatal error`
       );
     } catch {
       // If logging itself fails, write to stderr as last resort

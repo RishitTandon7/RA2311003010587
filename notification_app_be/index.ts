@@ -30,7 +30,7 @@ import {
 dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
 
 // ── Package identifier for all logs ──────────────────────────
-const PKG: LogPackage = "notification_app_be";
+const PKG: LogPackage = "service";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -96,7 +96,7 @@ function getAuthHeaders(): Record<string, string> {
 async function fetchNotifications(): Promise<Notification[]> {
   await LogInfo(
     PKG,
-    "Initiating GET request to /notifications endpoint to retrieve campus notifications"
+    "Fetching notifications"
   );
 
   try {
@@ -116,18 +116,15 @@ async function fetchNotifications(): Promise<Notification[]> {
 
     await LogInfo(
       PKG,
-      `Successfully fetched ${notifications.length} notifications — ` +
-        `breakdown: ${Object.entries(typeCounts)
-          .map(([t, c]) => `${t}=${c}`)
-          .join(", ")}`
+      `Fetched ${notifications.length} notifications`
     );
 
     return notifications;
   } catch (err) {
     const msg =
       err instanceof AxiosError
-        ? `Notifications API request failed [status=${err.response?.status ?? "N/A"}]: ${err.message}`
-        : `Unexpected error fetching notifications: ${String(err)}`;
+        ? `Notifications API failed`
+        : `Unexpected error fetching`;
 
     await LogError(PKG, msg);
     throw new Error(msg);
@@ -271,10 +268,10 @@ class PriorityInbox {
     if (this.heap.length < this.maxSize) {
       // Heap not full yet — simply insert
       this.push(item);
+      const shortId = String(item.ID).substring(0, 8);
       await LogDebug(
         PKG,
-        `PriorityInbox.add(): inserted notification ID=${item.ID} ` +
-          `(type=${item.Type}, priority=${item.priorityScore}), heap size=${this.heap.length}/${this.maxSize}`
+        `Added ${shortId} (${this.heap.length}/${this.maxSize})`
       );
     } else {
       const min = this.peekMin();
@@ -282,11 +279,11 @@ class PriorityInbox {
         // Current min is worse than new item — evict and replace
         const evicted = this.popMin()!;
         this.push(item);
+        const shortId = String(item.ID).substring(0, 8);
+        const evId = String(evicted.ID).substring(0, 8);
         await LogDebug(
           PKG,
-          `PriorityInbox.add(): replaced notification ID=${evicted.ID} ` +
-            `(priority=${evicted.priorityScore}) with ID=${item.ID} ` +
-            `(priority=${item.priorityScore}) — heap full at ${this.maxSize}`
+          `Repl ${evId} w/ ${shortId}`
         );
       }
       // else: new item is worse than current min — skip silently
@@ -321,8 +318,7 @@ async function getTopNotifications(
 ): Promise<ScoredNotification[]> {
   await LogDebug(
     PKG,
-    `Scoring ${notifications.length} notifications with priority weights: ` +
-      `Placement=${PRIORITY_WEIGHTS.Placement}, Result=${PRIORITY_WEIGHTS.Result}, Event=${PRIORITY_WEIGHTS.Event}`
+    `Scoring ${notifications.length} notifications`
   );
 
   // Score and parse timestamps
@@ -334,7 +330,7 @@ async function getTopNotifications(
 
   await LogInfo(
     PKG,
-    `Scored all ${scored.length} notifications — inserting into PriorityInbox (maxSize=${topN})`
+    `Inserting into PriorityInbox`
   );
 
   // Use PriorityInbox (min-heap) for efficient top-N selection
@@ -348,9 +344,7 @@ async function getTopNotifications(
 
   await LogInfo(
     PKG,
-    `PriorityInbox.getTop() returned ${topItems.length} notifications from ${notifications.length} total — ` +
-      `IDs: [${topItems.map((t) => t.ID).join(", ")}], ` +
-      `types: [${topItems.map((t) => t.Type).join(", ")}]`
+    `PriorityInbox returned top ${topItems.length}`
   );
 
   return topItems;
@@ -362,7 +356,7 @@ async function main(): Promise<void> {
   try {
     await LogInfo(
       PKG,
-      "Campus Notification Priority Inbox starting — fetching notifications from evaluation-service"
+      "Priority Inbox starting"
     );
 
     // Fetch live data
@@ -371,7 +365,7 @@ async function main(): Promise<void> {
     if (notifications.length === 0) {
       await LogWarn(
         PKG,
-        "No notifications returned from the API — inbox will be empty"
+        "No notifications returned"
       );
       return;
     }
@@ -382,30 +376,31 @@ async function main(): Promise<void> {
     // Output results via Log() — sorted output
     await LogInfo(
       PKG,
-      `\n========== PRIORITY INBOX — TOP 10 ==========`
+      `=== PRIORITY INBOX TOP 10 ===`
     );
 
     for (let i = 0; i < top10.length; i++) {
       const n = top10[i];
+      const text = `#${i + 1} [${n.Type}] ${n.Message}`;
       await LogInfo(
         PKG,
-        `  #${i + 1}  [${n.Type}]  ${n.Message}   ${n.Timestamp}`
+        text.substring(0, 47)
       );
     }
 
     await LogInfo(
       PKG,
-      `Priority Inbox complete — displayed ${top10.length} notifications ` +
-        `sorted by priority (Placement > Result > Event) then by recency (latest first)`
+      `Priority Inbox complete`
     );
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : `Unknown error: ${String(err)}`;
 
+    process.stderr.write(`[DEBUG FATAL] ${errorMessage}\n`);
     try {
       await LogFatal(
         PKG,
-        `Notification App terminated with fatal error: ${errorMessage}`
+        `Notification App fatal error`
       );
     } catch {
       process.stderr.write(

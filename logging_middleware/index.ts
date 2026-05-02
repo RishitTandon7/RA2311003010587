@@ -30,9 +30,9 @@ export type LogStack = "backend" | "frontend";
  * these so the evaluation service can categorise the entry.
  */
 export type LogPackage =
-  | "logging_middleware"
-  | "vehicle_maintenance_scheduler"
-  | "notification_app_be";
+  | "middleware"
+  | "service"
+  | "auth";
 
 /** Shape of a single log entry sent to the API */
 export interface LogEntry {
@@ -58,9 +58,9 @@ const ALLOWED_STACKS: ReadonlySet<string> = new Set<LogStack>([
 ]);
 
 const ALLOWED_PACKAGES: ReadonlySet<string> = new Set<LogPackage>([
-  "logging_middleware",
-  "vehicle_maintenance_scheduler",
-  "notification_app_be",
+  "middleware",
+  "service",
+  "auth",
 ]);
 
 const API_BASE_URL =
@@ -237,25 +237,22 @@ async function selfTest(): Promise<void> {
     await Log({
       stack: "backend",
       level: "info",
-      package: "logging_middleware",
-      message:
-        "Logging middleware initialised — self-test: validating connection to evaluation-service /logs endpoint",
+      package: "middleware",
+      message: "Self-test: validating connection",
     });
 
     await Log({
       stack: "backend",
       level: "debug",
-      package: "logging_middleware",
-      message:
-        "Self-test debug entry — verifying all log levels are accepted by the API",
+      package: "middleware",
+      message: "Self-test debug entry",
     });
 
     await Log({
       stack: "backend",
       level: "info",
-      package: "logging_middleware",
-      message:
-        "Self-test completed successfully — logging middleware is fully operational",
+      package: "middleware",
+      message: "Self-test completed successfully",
     });
   } catch (err) {
     // We intentionally write to stderr here ONLY during self-test
