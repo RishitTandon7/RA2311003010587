@@ -1,0 +1,22 @@
+{
+  "name": "ra2311003010587",
+  "version": "1.0.0",
+  "description": "Campus Hiring Evaluation — Backend Track",
+  "scripts": {
+    "build": "tsc",
+    "logging": "ts-node logging_middleware/index.ts",
+    "scheduler": "ts-node vehicle_maintenance_scheduler/index.ts",
+    "notifications": "ts-node notification_app_be/index.ts",
+    "all": "ts-node logging_middleware/index.ts && ts-node vehicle_maintenance_scheduler/index.ts && ts-node notification_app_be/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^22.15.16",
+    "axios": "^1.9.0",
+    "dotenv": "^16.5.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}

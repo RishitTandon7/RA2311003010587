@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "Node16",
+    "lib": ["ES2020"],
+    "outDir": "./dist",
+    "rootDir": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "sourceMap": true,
+    "moduleResolution": "node16",
+    "ignoreDeprecations": "6.0"
+  },
+  "include": [
+    "logging_middleware/**/*.ts",
+    "vehicle_maintenance_scheduler/**/*.ts",
+    "notification_app_be/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}
