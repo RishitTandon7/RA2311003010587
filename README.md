@@ -9,11 +9,16 @@ RA2311003010587/
 ├── tsconfig.json
 ├── package.json
 ├── logging_middleware/
-│   └── index.ts                      # Phase 1: Reusable Log() middleware
+│   ├── index.ts                      # Phase 1: Reusable Log() middleware
+│   └── package.json
 ├── vehicle_maintenance_scheduler/
-│   └── index.ts                      # Phase 2: 0/1 Knapsack DP scheduler
+│   ├── index.ts                      # Phase 2: 0/1 Knapsack DP scheduler
+│   ├── package.json
+│   └── screenshots/
 ├── notification_app_be/
-│   └── index.ts                      # Phase 3 Stage 6: Priority Inbox
+│   ├── index.ts                      # Phase 3 Stage 6: Priority Inbox
+│   ├── package.json
+│   └── screenshots/
 └── notification_system_design.md     # Phase 3 Stages 1–5: System design
 ```
 

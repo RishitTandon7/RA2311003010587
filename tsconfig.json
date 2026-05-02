@@ -12,8 +12,7 @@
     "resolveJsonModule": true,
     "declaration": true,
     "sourceMap": true,
-    "moduleResolution": "node16",
-    "ignoreDeprecations": "6.0"
+    "moduleResolution": "node16"
   },
   "include": [
     "logging_middleware/**/*.ts",

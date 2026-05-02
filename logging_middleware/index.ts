@@ -22,8 +22,8 @@ dotenv.config({ path: require("path").resolve(__dirname, "..", ".env") });
 /** Allowed log levels matching the evaluation-service contract */
 export type LogLevel = "info" | "debug" | "error" | "warn" | "fatal";
 
-/** Allowed stack identifiers */
-export type LogStack = "be" | "fe";
+/** Allowed stack identifiers — "backend" or "frontend" */
+export type LogStack = "backend" | "frontend";
 
 /**
  * Allowed package names — every call to Log() must use one of
@@ -52,7 +52,10 @@ const ALLOWED_LEVELS: ReadonlySet<string> = new Set<LogLevel>([
   "fatal",
 ]);
 
-const ALLOWED_STACKS: ReadonlySet<string> = new Set<LogStack>(["be", "fe"]);
+const ALLOWED_STACKS: ReadonlySet<string> = new Set<LogStack>([
+  "backend",
+  "frontend",
+]);
 
 const ALLOWED_PACKAGES: ReadonlySet<string> = new Set<LogPackage>([
   "logging_middleware",
@@ -89,7 +92,8 @@ function validateField(
 
 /**
  * Validates the complete LogEntry before sending it to the API.
- * Throws a descriptive error when validation fails.
+ * Throws a descriptive error when validation fails so invalid
+ * values are never silently accepted.
  */
 function validateLogEntry(entry: LogEntry): void {
   const errors: string[] = [];
@@ -119,6 +123,8 @@ function validateLogEntry(entry: LogEntry): void {
 /**
  * Log() — the single authorised way to emit log messages.
  *
+ * Accepts 4 fields: stack, level, package (pkg), message.
+ *
  * 1. Validates stack, level, package, and message
  * 2. POSTs the entry to the evaluation-service /logs endpoint
  * 3. Returns the API response data on success
@@ -126,14 +132,14 @@ function validateLogEntry(entry: LogEntry): void {
  *
  * @example
  * await Log({
- *   stack: "be",
+ *   stack: "backend",
  *   level: "info",
  *   package: "vehicle_maintenance_scheduler",
  *   message: "Fetched 5 depots and 42 vehicle tasks from API"
  * });
  */
 export async function Log(entry: LogEntry): Promise<unknown> {
-  // ── Step 1: Validate ────────────────────────────────────
+  // ── Step 1: Validate all 4 fields ───────────────────────
   validateLogEntry(entry);
 
   // ── Step 2: Read token (never hardcoded) ────────────────
@@ -144,7 +150,7 @@ export async function Log(entry: LogEntry): Promise<unknown> {
     );
   }
 
-  // ── Step 3: POST to evaluation-service ──────────────────
+  // ── Step 3: POST to evaluation-service /logs ────────────
   try {
     const response = await axios.post(
       LOGS_ENDPOINT,
@@ -189,7 +195,7 @@ export async function LogInfo(
   pkg: LogPackage,
   message: string
 ): Promise<unknown> {
-  return Log({ stack: "be", level: "info", package: pkg, message });
+  return Log({ stack: "backend", level: "info", package: pkg, message });
 }
 
 /** Shortcut for debug-level backend logs */
@@ -197,7 +203,7 @@ export async function LogDebug(
   pkg: LogPackage,
   message: string
 ): Promise<unknown> {
-  return Log({ stack: "be", level: "debug", package: pkg, message });
+  return Log({ stack: "backend", level: "debug", package: pkg, message });
 }
 
 /** Shortcut for error-level backend logs */
@@ -205,7 +211,7 @@ export async function LogError(
   pkg: LogPackage,
   message: string
 ): Promise<unknown> {
-  return Log({ stack: "be", level: "error", package: pkg, message });
+  return Log({ stack: "backend", level: "error", package: pkg, message });
 }
 
 /** Shortcut for warn-level backend logs */
@@ -213,7 +219,7 @@ export async function LogWarn(
   pkg: LogPackage,
   message: string
 ): Promise<unknown> {
-  return Log({ stack: "be", level: "warn", package: pkg, message });
+  return Log({ stack: "backend", level: "warn", package: pkg, message });
 }
 
 /** Shortcut for fatal-level backend logs */
@@ -221,7 +227,7 @@ export async function LogFatal(
   pkg: LogPackage,
   message: string
 ): Promise<unknown> {
-  return Log({ stack: "be", level: "fatal", package: pkg, message });
+  return Log({ stack: "backend", level: "fatal", package: pkg, message });
 }
 
 // ── Self-test (runs only when executed directly) ─────────────
@@ -229,7 +235,7 @@ export async function LogFatal(
 async function selfTest(): Promise<void> {
   try {
     await Log({
-      stack: "be",
+      stack: "backend",
       level: "info",
       package: "logging_middleware",
       message:
@@ -237,7 +243,7 @@ async function selfTest(): Promise<void> {
     });
 
     await Log({
-      stack: "be",
+      stack: "backend",
       level: "debug",
       package: "logging_middleware",
       message:
@@ -245,7 +251,7 @@ async function selfTest(): Promise<void> {
     });
 
     await Log({
-      stack: "be",
+      stack: "backend",
       level: "info",
       package: "logging_middleware",
       message:

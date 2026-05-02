@@ -1,0 +1,10 @@
+{
+  "name": "vehicle_maintenance_scheduler",
+  "version": "1.0.0",
+  "description": "Vehicle maintenance scheduler — 0/1 Knapsack DP optimisation per depot",
+  "main": "index.ts",
+  "scripts": {
+    "start": "npx ts-node index.ts"
+  },
+  "dependencies": {}
+}

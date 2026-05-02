@@ -134,32 +134,37 @@ async function fetchNotifications(): Promise<Notification[]> {
   }
 }
 
-// ── Priority Inbox — Efficient Top-N Selection ───────────────
+// ── PriorityInbox — Efficient Top-N Selection via Min-Heap ───
 
 /**
  * PriorityInbox selects the top-N notifications WITHOUT fully
  * sorting the entire array. This is crucial when the dataset
  * grows large (thousands of notifications).
  *
- * Algorithm: Partial selection using a min-heap of size N.
+ * Approach: Min-heap of fixed capacity (maxSize).
  *
- * We maintain a min-heap of capacity N. For each notification:
- *   - If the heap has fewer than N items, push it in.
+ * We maintain a min-heap where the "minimum" element is the
+ * one with the LOWEST priority (i.e. least important). For
+ * each incoming notification via add():
+ *   - If the heap has fewer than maxSize items, push it in.
  *   - Otherwise, compare with the heap's minimum:
  *     if the new item has higher priority, replace the min.
  *
- * Time:  O(n × log N) where n = total notifications, N = inbox size
+ * Time:  O(n × log N) where n = total notifications, N = maxSize
  * Space: O(N)
  *
  * This avoids the O(n × log n) cost of sorting the entire array
- * when N ≪ n.
+ * when N ≪ n (e.g. top 10 out of 10,000).
  */
 class PriorityInbox {
   private heap: ScoredNotification[] = [];
-  private readonly capacity: number;
+  private readonly maxSize: number;
 
-  constructor(capacity: number) {
-    this.capacity = capacity;
+  /**
+   * @param maxSize - Maximum number of top notifications to keep (default: 10)
+   */
+  constructor(maxSize: number = 10) {
+    this.maxSize = maxSize;
   }
 
   /**
@@ -253,28 +258,48 @@ class PriorityInbox {
   }
 
   /**
-   * Process a single notification.
-   * If the heap is not full, just insert it.
-   * If full, compare with the current min — replace if better.
+   * add(notification) — Process a single notification.
+   *
+   * If the heap is not full, insert it directly.
+   * If full, compare with the current minimum — replace if the
+   * new notification has higher priority. This ensures we never
+   * call .sort() on the full array.
+   *
+   * Includes a Log() call for observability on evictions.
    */
-  offer(item: ScoredNotification): void {
-    if (this.heap.length < this.capacity) {
+  async add(item: ScoredNotification): Promise<void> {
+    if (this.heap.length < this.maxSize) {
+      // Heap not full yet — simply insert
       this.push(item);
+      await LogDebug(
+        PKG,
+        `PriorityInbox.add(): inserted notification ID=${item.ID} ` +
+          `(type=${item.Type}, priority=${item.priorityScore}), heap size=${this.heap.length}/${this.maxSize}`
+      );
     } else {
       const min = this.peekMin();
       if (min && this.isLowerPriority(min, item)) {
         // Current min is worse than new item — evict and replace
-        this.popMin();
+        const evicted = this.popMin()!;
         this.push(item);
+        await LogDebug(
+          PKG,
+          `PriorityInbox.add(): replaced notification ID=${evicted.ID} ` +
+            `(priority=${evicted.priorityScore}) with ID=${item.ID} ` +
+            `(priority=${item.priorityScore}) — heap full at ${this.maxSize}`
+        );
       }
+      // else: new item is worse than current min — skip silently
     }
   }
 
   /**
-   * Extract all items from the heap, sorted from highest to
-   * lowest priority (the final top-N result).
+   * getTop() — Extract all items from the heap, sorted from
+   * highest to lowest priority (the final top-N result).
+   *
+   * This drains the heap; call only once after all add() calls.
    */
-  drain(): ScoredNotification[] {
+  getTop(): ScoredNotification[] {
     const result: ScoredNotification[] = [];
     while (this.heap.length > 0) {
       result.push(this.popMin()!);
@@ -307,18 +332,23 @@ async function getTopNotifications(
     parsedTime: new Date(n.Timestamp).getTime(),
   }));
 
+  await LogInfo(
+    PKG,
+    `Scored all ${scored.length} notifications — inserting into PriorityInbox (maxSize=${topN})`
+  );
+
   // Use PriorityInbox (min-heap) for efficient top-N selection
   const inbox = new PriorityInbox(topN);
 
   for (const item of scored) {
-    inbox.offer(item);
+    await inbox.add(item);
   }
 
-  const topItems = inbox.drain();
+  const topItems = inbox.getTop();
 
   await LogInfo(
     PKG,
-    `PriorityInbox selected top ${topItems.length} notifications from ${notifications.length} total — ` +
+    `PriorityInbox.getTop() returned ${topItems.length} notifications from ${notifications.length} total — ` +
       `IDs: [${topItems.map((t) => t.ID).join(", ")}], ` +
       `types: [${topItems.map((t) => t.Type).join(", ")}]`
   );
@@ -349,7 +379,7 @@ async function main(): Promise<void> {
     // Get top 10 by priority + recency
     const top10 = await getTopNotifications(notifications, 10);
 
-    // Output results via Log()
+    // Output results via Log() — sorted output
     await LogInfo(
       PKG,
       `\n========== PRIORITY INBOX — TOP 10 ==========`
@@ -359,8 +389,7 @@ async function main(): Promise<void> {
       const n = top10[i];
       await LogInfo(
         PKG,
-        `  #${i + 1} | ID=${n.ID} | Type=${n.Type} (priority=${n.priorityScore}) | ` +
-          `Time=${n.Timestamp} | Message="${n.Message}"`
+        `  #${i + 1}  [${n.Type}]  ${n.Message}   ${n.Timestamp}`
       );
     }
 

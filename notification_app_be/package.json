@@ -1,0 +1,10 @@
+{
+  "name": "notification_app_be",
+  "version": "1.0.0",
+  "description": "Campus notification priority inbox — efficient top-N selection via min-heap",
+  "main": "index.ts",
+  "scripts": {
+    "start": "npx ts-node index.ts"
+  },
+  "dependencies": {}
+}

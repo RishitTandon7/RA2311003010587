@@ -1,0 +1,10 @@
+{
+  "name": "logging_middleware",
+  "version": "1.0.0",
+  "description": "Reusable logging middleware — validates and POSTs structured log entries to the evaluation-service",
+  "main": "index.ts",
+  "scripts": {
+    "start": "npx ts-node index.ts"
+  },
+  "dependencies": {}
+}
